@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Water pH Levels</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-size: 2em;
+    }
+    #chart-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    #phChart {
+      max-height: 450px;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #7f8c8d;
+    }
+    #error {
+      color: #e74c3c;
+      display: none;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Water pH Levels Across Cities</h1>
+  <div id="chart-container">
+    <canvas id="phChart"></canvas>
+    <div id="status">Loading data...</div>
+    <div id="error"></div>
+  </div>
+
+  <!-- Include Chart.js and Plugins from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script>
+    // Register plugins
+    Chart.register(ChartDataLabels);
+
+    // Initialize Chart.js
+    const ctx = document.getElementById('phChart').getContext('2d');
+    const phChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [], // City names
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Current pH',
+            data: [], // Current pH values
+            backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1,
+            order: 3
+          },
+          {
+            type: 'bar',
+            label: 'Previous pH (1 min ago)',
+            data: [], // pH values from 1 update ago
+            backgroundColor: 'rgba(255, 206, 86, 0.7)', // Yellow
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1,
+            order: 2
+          },
+          {
+            type: 'bar',
+            label: '2 min ago',
+            data: [], // pH values from 2 updates ago
+            backgroundColor: 'rgba(75, 192, 192, 0.7)', // Teal
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+            order: 1
+          },
+          {
+            type: 'line',
+            label: 'Average pH',
+            data: [], // Average pH per update
+            borderColor: 'rgba(255, 99, 132, 1)', // Red
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+            datalabels: { display: false }, // No labels on line points
+            order: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 1200,
+          easing: 'easeOutQuart'
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            min: 3.5,
+            max: 8.5,
+            ticks: {
+              stepSize: 0.5,
+              font: { size: 12 }
+            },
+            title: {
+              display: true,
+              text: 'pH Level',
+              font: { size: 14, weight: 'bold' }
+            },
+            grid: {
+              color: '#ecf0f1'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'City',
+              font: { size: 14, weight: 'bold' }
+            },
+            ticks: {
+              font: { size: 12 },
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              font: { size: 14 },
+              usePointStyle: true
+            }
+          },
+          title: {
+            display: true,
+            text: 'Water pH Levels Trend (Updated Every Minute)',
+            font: { size: 16, weight: 'bold' },
+            padding: { top: 10, bottom: 20 }
+          },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            formatter: (value) => value ? value.toFixed(2) : '',
+            font: {
+              size: 10,
+              weight: 'bold'
+            },
+            color: '#2c3e50'
+          },
+          annotation: {
+            annotations: {
+              neutralLine: {
+                type: 'line',
+                yMin: 7,
+                yMax: 7,
+                borderColor: '#e74c3c',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                label: {
+                  content: 'Neutral pH (7.0)',
+                  display: true,
+                  position: 'end',
+                  backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                  color: '#fff',
+                  font: { size: 12 }
+                }
+              }
+            }
+          }
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        hover: {
+          animationDuration: 200
+        },
+        barPercentage: 0.3, // Narrower bars for grouping
+        categoryPercentage: 0.9 // Space between city groups
+      }
+    });
+
+    // DOM elements
+    const statusDiv = document.getElementById('status');
+    const errorDiv = document.getElementById('error');
+
+    // Store history of pH data (up to 3 updates)
+    let phHistory = [];
+
+    // Function to fetch pH data
+    async function fetchPhData() {
+      console.log('Fetching data...');
+      try {
+        const response = await fetch('http://localhost:3000/api/ph-levels', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.status !== 'success' || !result.data) {
+          throw new Error('Invalid data format');
+        }
+
+        updateChart(result.data);
+        errorDiv.style.display = 'none';
+      } catch (error) {
+        console.error('Fetch error:', error.message);
+        errorDiv.textContent = `Error: Unable to fetch data. Please ensure the backend is running at http://localhost:3000.`;
+        errorDiv.style.display = 'block';
+        statusDiv.textContent = 'Failed to load data';
+      }
+    }
+
+    // Function to update the chart
+    function updateChart(data) {
+      // Add new data to history
+      phHistory.unshift(data);
+      if (phHistory.length > 3) {
+        phHistory.pop(); // Keep only the last 3 updates
+      }
+
+      const cities = data.map(item => item.city);
+      const currentPh = data.map(item => item.phLevel);
+      const prevPh = phHistory[1] ? phHistory[1].map(item => item.phLevel) : new Array(cities.length).fill(null);
+      const prevPrevPh = phHistory[2] ? phHistory[2].map(item => item.phLevel) : new Array(cities.length).fill(null);
+      const timestamp = new Date(data[0].timestamp).toLocaleString();
+
+      // Calculate average pH for each update
+      const averages = phHistory.map(update => {
+        if (!update) return null;
+        const sum = update.reduce((acc, item) => acc + item.phLevel, 0);
+        return Number((sum / update.length).toFixed(2));
+      }).reverse(); // Reverse to match bar order
+
+      // Update chart
+      phChart.data.labels = cities;
+      phChart.data.datasets[0].data = currentPh;
+      phChart.data.datasets[1].data = prevPh;
+      phChart.data.datasets[2].data = prevPrevPh;
+      phChart.data.datasets[3].data = new Array(cities.length).fill(averages[0] || null);
+      phChart.update();
+
+      statusDiv.textContent = `Last updated: ${timestamp}`;
+    }
+
+    // Initial fetch
+    fetchPhData();
+
+    // Poll every 60 seconds
+    setInterval(fetchPhData, 60_000);
+  </script>
+</body>
+</html>
